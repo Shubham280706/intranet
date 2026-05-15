@@ -13,6 +13,7 @@ use Minishlink\WebPush\Subscription;
 function sendPushToUser($userId, $title, $body, $url = '/intranet/dashboard.php') {
     try {
         global $pdo;
+        error_log("sendPushToUser called: userId=$userId, title=$title");
 
         // Get all push subscriptions for this user
         $stmt = $pdo->prepare(
@@ -25,6 +26,7 @@ function sendPushToUser($userId, $title, $body, $url = '/intranet/dashboard.php'
             error_log("No push subscriptions found for user $userId");
             return false;
         }
+        error_log("Found " . count($subscriptions) . " subscriptions for user $userId");
 
         // VAPID authentication
         $auth = [
