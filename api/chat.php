@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/push_send.php';
 requireLogin();
 
 $pdo    = getDB();
@@ -85,6 +86,10 @@ switch ($action) {
         $senderName = sanitize($_SESSION['name'] ?? 'Someone');
         $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?,?)")
             ->execute([$receiver_id, $senderName . ' sent you a message']);
+
+        // Send browser push notification
+        $pushBody = mb_substr($message, 0, 100);
+        sendPushToUser($receiver_id, '💬 New message from ' . $senderName, $pushBody, '/intranet/chat.php?with=' . $uid);
 
         jsonResponse(['success' => true, 'id' => $msgId, 'sent_at' => date('Y-m-d H:i:s')]);
 

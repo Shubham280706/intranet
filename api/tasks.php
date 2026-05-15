@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/push_send.php';
 requireLogin();
 
 $pdo    = getDB();
@@ -97,6 +98,10 @@ switch ($action) {
         $notifMsg = 'New task assigned to you: "' . mb_substr($title, 0, 60) . '"';
         $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?,?)")
             ->execute([$assigned_to, $notifMsg]);
+
+        // Send browser push notification
+        $pushBody = $title . ($due_date ? ' • Due: ' . $due_date : '');
+        sendPushToUser($assigned_to, '📋 New task assigned', $pushBody, '/intranet/tasks.php');
 
         jsonResponse(['success' => true, 'id' => $taskId]);
 

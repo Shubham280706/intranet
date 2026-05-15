@@ -237,3 +237,5 @@ function updateSidebarBadges(msgCount, taskCount) {
 
 startNotificationPolling();
 </script>
+
+<script src="/intranet/assets/js/push.js"></script>

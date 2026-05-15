@@ -23,6 +23,8 @@ access_log
 # Dependencies
 vendor/
 node_modules/
+composer.phar
+composer-setup.php
 
 # Temporary files
 *.tmp
