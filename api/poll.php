@@ -17,10 +17,10 @@ $newTasks = [];
 try {
     $stmt = $pdo->prepare(
         "SELECT id, sender_id, (SELECT name FROM users WHERE id=sender_id) AS sender_name,
-                message, created_at
+                message, sent_at
          FROM messages
-         WHERE receiver_id = ? AND created_at > FROM_UNIXTIME(?)
-         ORDER BY created_at DESC"
+         WHERE receiver_id = ? AND sent_at > FROM_UNIXTIME(?)
+         ORDER BY sent_at DESC"
     );
     $stmt->execute([$uid, $lastCheck]);
     $rows = $stmt->fetchAll();
