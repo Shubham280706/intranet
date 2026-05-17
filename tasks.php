@@ -31,14 +31,20 @@ $tasks = $stmt->fetchAll();
 
 // Calculate stats
 $total = count($tasks);
-$todo = count(array_filter($tasks, fn($t) => $t['status'] === 'pending'));
-$inprogress = count(array_filter($tasks, fn($t) => $t['status'] === 'in_progress'));
-$done = count(array_filter($tasks, fn($t) => $t['status'] === 'completed'));
-$overdue = count(array_filter($tasks, fn($t) => {
-    if ($t['status'] === 'completed') return false;
-    if (!$t['due_date']) return false;
-    return strtotime($t['due_date']) < strtotime('today');
-}));
+$todo = 0;
+$inprogress = 0;
+$done = 0;
+$overdue = 0;
+
+foreach ($tasks as $t) {
+    if ($t['status'] === 'pending') $todo++;
+    elseif ($t['status'] === 'in_progress') $inprogress++;
+    elseif ($t['status'] === 'completed') $done++;
+
+    if ($t['status'] !== 'completed' && $t['due_date'] && strtotime($t['due_date']) < strtotime('today')) {
+        $overdue++;
+    }
+}
 
 // Get employees for dropdowns
 $empStmt = $pdo->query("SELECT id, name FROM users WHERE id != $uid ORDER BY name");
