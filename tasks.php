@@ -12,43 +12,11 @@ $uid = currentUserId();
 <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
 <div class="main">
     <?php require_once __DIR__ . '/includes/header.php'; ?>
-
     <div class="page-content">
         <style>
-            .tasks-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 32px;
-                gap: 16px;
-            }
-
-            .tasks-header h1 {
-                font-size: 32px;
-                font-weight: 700;
-                color: #111827;
-                margin: 0;
-            }
-
-            .btn-assign {
-                background: var(--primary);
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: var(--radius-lg);
-                cursor: pointer;
-                font-weight: 600;
-                font-size: 14px;
-                transition: var(--transition);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-
-            .btn-assign:hover {
-                background: var(--primary-hover);
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            /* RESET & BASICS */
+            #taskContent * {
+                box-sizing: border-box;
             }
 
             /* STATS BAR */
@@ -59,371 +27,427 @@ $uid = currentUserId();
                 margin-bottom: 32px;
             }
 
-            .stat-card {
+            .stat-box {
                 background: white;
-                border-radius: var(--radius-lg);
+                border: 1px solid #E5E7EB;
+                border-radius: 12px;
                 padding: 20px;
-                border: 0.5px solid var(--border);
                 text-align: center;
-                transition: var(--transition);
             }
 
-            .stat-card:hover {
-                box-shadow: var(--shadow-lg);
-                transform: translateY(-2px);
+            .stat-number {
+                font-size: 28px;
+                font-weight: 700;
+                margin-bottom: 8px;
             }
 
             .stat-label {
                 font-size: 12px;
                 font-weight: 600;
                 text-transform: uppercase;
-                color: var(--gray-600);
-                margin-bottom: 8px;
+                color: #6B7280;
                 letter-spacing: 0.5px;
             }
 
-            .stat-number {
-                font-size: 32px;
-                font-weight: 700;
-                color: var(--gray-900);
-            }
-
             .stat-todo .stat-number { color: #D97706; }
-            .stat-progress .stat-number { color: var(--primary); }
-            .stat-done .stat-number { color: #059669; }
-            .stat-overdue .stat-number { color: var(--danger); }
+            .stat-progress .stat-number { color: #2563EB; }
+            .stat-done .stat-number { color: #10B981; }
+            .stat-overdue .stat-number { color: #DC2626; }
 
             /* FILTER BAR */
             .filter-bar {
-                background: white;
-                border-radius: var(--radius-lg);
-                padding: 16px;
-                border: 0.5px solid var(--border);
                 display: flex;
                 gap: 12px;
-                align-items: center;
                 margin-bottom: 24px;
+                align-items: center;
                 flex-wrap: wrap;
             }
 
-            .filter-search {
+            .search-input {
                 flex: 1;
-                min-width: 200px;
-            }
-
-            .filter-search input {
-                width: 100%;
+                min-width: 250px;
                 padding: 10px 14px;
-                border: 0.5px solid var(--border);
-                border-radius: var(--radius);
+                border: 1px solid #E5E7EB;
+                border-radius: 8px;
                 font-size: 14px;
                 font-family: inherit;
             }
 
-            .filter-search input::placeholder {
-                color: var(--gray-400);
-            }
-
-            .filter-search input:focus {
+            .search-input:focus {
                 outline: none;
-                border-color: var(--primary);
+                border-color: #2563EB;
                 box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
             }
 
             .filter-select {
-                padding: 10px 14px;
-                border: 0.5px solid var(--border);
-                border-radius: var(--radius);
+                padding: 10px 12px;
+                border: 1px solid #E5E7EB;
+                border-radius: 8px;
                 font-size: 14px;
                 font-family: inherit;
                 background: white;
                 cursor: pointer;
-                min-width: 140px;
+                min-width: 130px;
             }
 
             .filter-select:focus {
                 outline: none;
-                border-color: var(--primary);
+                border-color: #2563EB;
                 box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
             }
 
             .btn-reset {
-                background: var(--gray-100);
-                color: var(--gray-700);
                 padding: 10px 16px;
+                background: #F3F4F6;
+                color: #374151;
                 border: none;
-                border-radius: var(--radius);
+                border-radius: 8px;
                 cursor: pointer;
                 font-size: 14px;
                 font-weight: 600;
-                transition: var(--transition);
+                font-family: inherit;
+                transition: background 0.2s;
             }
 
             .btn-reset:hover {
-                background: var(--gray-200);
+                background: #E5E7EB;
+            }
+
+            .btn-new-task {
+                padding: 10px 16px;
+                background: #2563EB;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                font-family: inherit;
+                transition: background 0.2s;
+                margin-left: auto;
+            }
+
+            .btn-new-task:hover {
+                background: #1D4ED8;
             }
 
             /* TABLE */
-            .table-wrapper {
+            .table-container {
                 background: white;
-                border-radius: var(--radius-lg);
-                border: 0.5px solid var(--border);
+                border-radius: 12px;
+                border: 1px solid #E5E7EB;
                 overflow: hidden;
             }
 
-            .table-header {
-                padding: 16px;
-                text-align: right;
-                color: var(--gray-600);
-                font-size: 13px;
-            }
-
-            table {
+            .table-container table {
                 width: 100%;
                 border-collapse: collapse;
+                font-size: 14px;
             }
 
-            thead {
-                background: var(--gray-50);
-                border-bottom: 0.5px solid var(--border);
+            .table-container thead {
+                background: #F9FAFB;
+                position: sticky;
+                top: 0;
+                z-index: 10;
             }
 
-            th {
-                padding: 14px 16px;
+            .table-container th {
+                padding: 12px 16px;
                 text-align: left;
                 font-size: 11px;
                 font-weight: 700;
                 text-transform: uppercase;
-                color: var(--gray-700);
+                color: #4B5563;
                 letter-spacing: 0.5px;
+                border-bottom: 1px solid #E5E7EB;
             }
 
-            td {
-                padding: 16px;
-                border-bottom: 0.5px solid var(--border);
-                font-size: 14px;
+            .table-container td {
+                padding: 12px 16px;
+                border-bottom: 1px solid #E5E7EB;
+                color: #111827;
             }
 
-            tbody tr {
-                transition: var(--transition);
+            .table-container tbody tr {
+                transition: background-color 0.15s;
             }
 
-            tbody tr:hover {
-                background: var(--gray-50);
+            .table-container tbody tr:hover {
+                background: #EFF6FF;
             }
 
-            tbody tr.overdue {
-                background: #FFF8F8;
+            .table-container tbody tr.overdue {
+                background: #FEF2F2;
             }
 
-            tbody tr.completed {
-                opacity: 0.7;
+            .table-container tbody tr.overdue:hover {
+                background: #FDED;
             }
 
-            /* COLUMNS */
-            .col-employee { width: 16%; }
-            .col-task { width: 26%; }
-            .col-priority { width: 11%; }
-            .col-status { width: 13%; }
-            .col-duedate { width: 12%; }
-            .col-progress { width: 11%; }
-            .col-actions { width: 11%; }
+            /* CHECKBOX */
+            .checkbox-col {
+                width: 40px;
+                text-align: center;
+            }
 
-            .employee-cell {
+            .checkbox-col input[type="checkbox"] {
+                cursor: pointer;
+                width: 16px;
+                height: 16px;
+            }
+
+            /* TASK COLUMN */
+            .task-col {
+                width: 30%;
+            }
+
+            .task-title {
+                font-weight: 600;
+                color: #111827;
+                margin-bottom: 4px;
+            }
+
+            .task-desc {
+                font-size: 12px;
+                color: #6B7280;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 250px;
+            }
+
+            /* ASSIGNEE COLUMN */
+            .assignee-col {
+                width: 18%;
+            }
+
+            .assignee-cell {
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 10px;
             }
 
-            .employee-info {
+            .avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
                 display: flex;
-                flex-direction: column;
-                gap: 2px;
-            }
-
-            .employee-name {
-                font-weight: 600;
-                color: var(--gray-900);
-            }
-
-            .employee-dept {
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: 700;
                 font-size: 12px;
-                color: var(--gray-500);
+                flex-shrink: 0;
             }
 
-            .task-cell {
+            /* PRIORITY COLUMN */
+            .priority-col {
+                width: 10%;
+            }
+
+            .badge {
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+
+            .badge-high {
+                background: #FEE2E2;
+                color: #991B1B;
+            }
+
+            .badge-medium {
+                background: #FEF3C7;
+                color: #92400E;
+            }
+
+            .badge-low {
+                background: #DCFCE7;
+                color: #166534;
+            }
+
+            /* STATUS COLUMN */
+            .status-col {
+                width: 12%;
+            }
+
+            .status-pending {
+                background: #FEF3C7;
+                color: #92400E;
+            }
+
+            .status-in_progress {
+                background: #DBEAFE;
+                color: #1E40AF;
+            }
+
+            .status-completed {
+                background: #DCFCE7;
+                color: #166534;
+            }
+
+            .status-overdue {
+                background: #FEE2E2;
+                color: #991B1B;
+            }
+
+            /* DUE DATE COLUMN */
+            .duedate-col {
+                width: 12%;
+            }
+
+            .due-date-text {
+                color: #111827;
+            }
+
+            .due-date-text.overdue {
+                color: #DC2626;
+                font-weight: 600;
+            }
+
+            /* PROGRESS COLUMN */
+            .progress-col {
+                width: 12%;
+            }
+
+            .progress-container {
                 display: flex;
                 flex-direction: column;
                 gap: 4px;
             }
 
-            .task-title {
-                font-weight: 600;
-                color: var(--gray-900);
-                line-height: 1.4;
-            }
-
-            .task-desc {
-                font-size: 13px;
-                color: var(--gray-500);
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                max-width: 250px;
-            }
-
-            /* BADGES */
-            .badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 6px 12px;
-                border-radius: 20px;
-                font-size: 13px;
-                font-weight: 600;
-                width: fit-content;
-            }
-
-            .badge-dot {
-                width: 6px;
-                height: 6px;
-                border-radius: 50%;
-            }
-
-            .priority-high { background: #FEE2E2; color: #991B1B; }
-            .priority-high .badge-dot { background: #EF4444; }
-
-            .priority-medium { background: #FEF9C3; color: #854D0E; }
-            .priority-medium .badge-dot { background: #F59E0B; }
-
-            .priority-low { background: #DCFCE7; color: #166534; }
-            .priority-low .badge-dot { background: #10B981; }
-
-            .status-pending { background: #FEF9C3; color: #854D0E; }
-            .status-in_progress { background: #DBEAFE; color: #1E40AF; }
-            .status-completed { background: #DCFCE7; color: #166534; }
-            .status-overdue { background: #FEE2E2; color: #991B1B; }
-
-            /* DUE DATE */
-            .due-date {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                color: var(--gray-700);
-            }
-
-            .due-date.overdue {
-                color: var(--danger);
-                font-weight: 600;
-            }
-
-            .due-icon {
-                font-size: 14px;
-            }
-
-            /* PROGRESS */
-            .progress-cell {
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-            }
-
             .progress-text {
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 600;
-                color: var(--gray-700);
+                color: #111827;
             }
 
             .progress-bar {
                 width: 100%;
                 height: 4px;
-                background: var(--gray-200);
+                background: #E5E7EB;
                 border-radius: 2px;
                 overflow: hidden;
             }
 
             .progress-fill {
                 height: 100%;
-                background: var(--primary);
+                background: #2563EB;
                 border-radius: 2px;
                 transition: width 0.3s ease;
             }
 
-            .progress-fill.completed { background: #10B981; }
-            .progress-fill.overdue { background: var(--danger); }
+            .progress-fill.completed {
+                background: #10B981;
+            }
 
-            /* ACTIONS */
-            .actions-cell {
+            .progress-fill.overdue {
+                background: #DC2626;
+            }
+
+            /* ACTIONS COLUMN */
+            .actions-col {
+                width: 8%;
+                text-align: center;
+            }
+
+            .action-btn {
+                background: none;
+                border: 1px solid #E5E7EB;
+                color: #374151;
+                padding: 6px 10px;
+                margin: 0 2px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 600;
+                font-family: inherit;
+                transition: all 0.15s;
+            }
+
+            .action-btn:hover {
+                background: #F3F4F6;
+                border-color: #D1D5DB;
+            }
+
+            .action-btn.delete:hover {
+                background: #FEE2E2;
+                border-color: #FECACA;
+                color: #DC2626;
+            }
+
+            /* PAGINATION */
+            .pagination-bar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px;
+                border-top: 1px solid #E5E7EB;
+                background: #FFFFFF;
+            }
+
+            .pagination-text {
+                font-size: 13px;
+                color: #6B7280;
+            }
+
+            .pagination-controls {
                 display: flex;
                 gap: 8px;
             }
 
-            .btn-icon {
-                background: none;
-                border: none;
+            .pagination-btn {
+                padding: 8px 12px;
+                border: 1px solid #E5E7EB;
+                background: white;
+                color: #374151;
+                border-radius: 6px;
                 cursor: pointer;
-                padding: 6px;
-                border-radius: var(--radius);
-                font-size: 16px;
-                transition: var(--transition);
-                color: var(--gray-600);
-            }
-
-            .btn-icon:hover {
-                background: var(--gray-100);
-                color: var(--gray-900);
-            }
-
-            .btn-icon.delete:hover {
-                background: #FEE2E2;
-                color: var(--danger);
-            }
-
-            .status-dropdown {
-                padding: 6px 10px;
-                border: 0.5px solid var(--border);
-                border-radius: var(--radius);
                 font-size: 13px;
-                cursor: pointer;
+                font-weight: 600;
+                font-family: inherit;
+                transition: all 0.15s;
+            }
+
+            .pagination-btn:hover:not(:disabled) {
+                background: #F3F4F6;
+                border-color: #D1D5DB;
+            }
+
+            .pagination-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
             }
 
             /* EMPTY STATE */
             .empty-state {
                 text-align: center;
                 padding: 80px 40px;
+                background: white;
+                border-radius: 12px;
+                border: 1px solid #E5E7EB;
             }
 
             .empty-icon {
                 font-size: 64px;
                 margin-bottom: 16px;
-                opacity: 0.4;
+                opacity: 0.3;
             }
 
             .empty-title {
                 font-size: 18px;
                 font-weight: 700;
-                color: var(--gray-800);
+                color: #111827;
                 margin-bottom: 8px;
             }
 
             .empty-text {
-                color: var(--gray-500);
-                margin-bottom: 24px;
-            }
-
-            .btn-clear {
-                background: var(--primary);
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: var(--radius-lg);
-                cursor: pointer;
-                font-weight: 600;
-                transition: var(--transition);
-            }
-
-            .btn-clear:hover {
-                background: var(--primary-hover);
+                font-size: 14px;
+                color: #6B7280;
             }
 
             /* MODALS */
@@ -446,9 +470,9 @@ $uid = currentUserId();
 
             .modal-content {
                 background: white;
-                border-radius: var(--radius-lg);
+                border-radius: 12px;
                 padding: 32px;
-                max-width: 600px;
+                max-width: 500px;
                 width: 90%;
                 max-height: 90vh;
                 overflow-y: auto;
@@ -461,105 +485,113 @@ $uid = currentUserId();
                 align-items: center;
                 margin-bottom: 24px;
                 padding-bottom: 16px;
-                border-bottom: 0.5px solid var(--border);
+                border-bottom: 1px solid #E5E7EB;
             }
 
             .modal-header h2 {
-                font-size: 24px;
+                font-size: 20px;
                 font-weight: 700;
-                color: var(--gray-900);
+                color: #111827;
                 margin: 0;
             }
 
             .modal-close {
                 background: none;
                 border: none;
-                font-size: 24px;
+                font-size: 28px;
                 cursor: pointer;
-                color: var(--gray-500);
-                transition: var(--transition);
+                color: #6B7280;
+                padding: 0;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .modal-close:hover {
-                color: var(--gray-900);
+                color: #111827;
             }
 
             .form-group {
-                margin-bottom: 20px;
+                margin-bottom: 16px;
             }
 
             .form-label {
                 display: block;
                 font-weight: 600;
-                color: var(--gray-900);
-                margin-bottom: 8px;
+                color: #111827;
+                margin-bottom: 6px;
                 font-size: 14px;
             }
 
             .form-control {
                 width: 100%;
-                padding: 10px 14px;
-                border: 0.5px solid var(--border);
-                border-radius: var(--radius);
+                padding: 10px 12px;
+                border: 1px solid #E5E7EB;
+                border-radius: 8px;
                 font-size: 14px;
                 font-family: inherit;
-                transition: var(--transition);
             }
 
             .form-control:focus {
                 outline: none;
-                border-color: var(--primary);
+                border-color: #2563EB;
                 box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
             }
 
             textarea.form-control {
                 resize: vertical;
-                min-height: 100px;
+                min-height: 80px;
             }
 
             .form-row {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 16px;
+                gap: 12px;
             }
 
             .modal-footer {
                 display: flex;
                 gap: 12px;
                 justify-content: flex-end;
-                margin-top: 32px;
+                margin-top: 24px;
                 padding-top: 16px;
-                border-top: 0.5px solid var(--border);
+                border-top: 1px solid #E5E7EB;
             }
 
             .btn-cancel {
-                background: var(--gray-100);
-                color: var(--gray-700);
-                padding: 10px 24px;
+                padding: 10px 20px;
+                background: #F3F4F6;
+                color: #374151;
                 border: none;
-                border-radius: var(--radius-lg);
+                border-radius: 8px;
                 cursor: pointer;
                 font-weight: 600;
-                transition: var(--transition);
+                font-size: 14px;
+                font-family: inherit;
+                transition: background 0.2s;
             }
 
             .btn-cancel:hover {
-                background: var(--gray-200);
+                background: #E5E7EB;
             }
 
             .btn-submit {
-                background: var(--primary);
+                padding: 10px 20px;
+                background: #2563EB;
                 color: white;
-                padding: 10px 24px;
                 border: none;
-                border-radius: var(--radius-lg);
+                border-radius: 8px;
                 cursor: pointer;
                 font-weight: 600;
-                transition: var(--transition);
+                font-size: 14px;
+                font-family: inherit;
+                transition: background 0.2s;
             }
 
             .btn-submit:hover {
-                background: var(--primary-hover);
+                background: #1D4ED8;
             }
 
             .btn-submit:disabled {
@@ -567,22 +599,7 @@ $uid = currentUserId();
                 cursor: not-allowed;
             }
 
-            /* TASK COUNT */
-            .task-count {
-                padding: 8px 0;
-                color: var(--gray-600);
-                font-size: 13px;
-                text-align: right;
-            }
-
             /* RESPONSIVE */
-            @media (max-width: 1024px) {
-                .col-task { width: 35%; }
-                .col-progress { display: none; }
-                .col-duedate { display: none; }
-                .col-priority { width: 12%; }
-            }
-
             @media (max-width: 768px) {
                 .stats-bar {
                     grid-template-columns: repeat(2, 1fr);
@@ -592,73 +609,44 @@ $uid = currentUserId();
                     flex-direction: column;
                 }
 
-                .filter-search {
-                    min-width: 100%;
+                .search-input {
+                    width: 100%;
+                    min-width: auto;
                 }
 
                 .filter-select {
                     width: 100%;
                 }
 
-                .col-employee { width: 35%; }
-                .col-task { display: none; }
-                .col-priority { display: none; }
-                .col-progress { display: none; }
-                .col-duedate { width: 25%; }
-
-                .task-cell {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 4px;
+                .btn-new-task {
+                    width: 100%;
+                    margin-left: 0;
                 }
 
-                td {
-                    padding: 12px;
-                    font-size: 13px;
+                .task-col { width: 40%; }
+                .assignee-col { display: none; }
+                .priority-col { display: none; }
+                .progress-col { display: none; }
+
+                .table-container td,
+                .table-container th {
+                    padding: 10px 12px;
+                    font-size: 12px;
                 }
             }
 
             @media (max-width: 480px) {
-                .tasks-header {
-                    flex-direction: column;
-                    align-items: stretch;
-                }
-
-                .tasks-header h1 {
-                    font-size: 24px;
-                }
-
-                .btn-assign {
-                    width: 100%;
-                    justify-content: center;
-                }
-
                 .stats-bar {
                     grid-template-columns: 1fr;
-                    gap: 12px;
                 }
 
-                .filter-bar {
-                    flex-direction: column;
-                }
+                .task-col { width: 50%; }
+                .status-col { width: auto; }
+                .actions-col { width: auto; }
+                .duedate-col { display: none; }
 
-                .filter-select {
-                    width: 100%;
-                }
-
-                .btn-reset {
-                    width: 100%;
-                }
-
-                .col-employee { width: 100%; }
-                .col-actions { width: 100%; }
-
-                table {
-                    font-size: 12px;
-                }
-
-                td, th {
-                    padding: 10px;
+                .table-container {
+                    overflow-x: auto;
                 }
 
                 .modal-content {
@@ -672,95 +660,90 @@ $uid = currentUserId();
             }
         </style>
 
-        <!-- PAGE HEADER -->
-        <div class="tasks-header">
-            <h1>Tasks</h1>
-            <?php if ($isAdmin): ?>
-                <button class="btn-assign" onclick="openModal('assignModal')">
-                    <span>+</span> Assign New Task
-                </button>
-            <?php endif; ?>
-        </div>
+        <div id="taskContent">
+            <!-- STATS BAR -->
+            <div class="stats-bar">
+                <div class="stat-box stat-total">
+                    <div class="stat-number" id="statTotal">0</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat-box stat-todo">
+                    <div class="stat-number" id="statTodo">0</div>
+                    <div class="stat-label">To Do</div>
+                </div>
+                <div class="stat-box stat-progress">
+                    <div class="stat-number" id="statProgress">0</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat-box stat-done">
+                    <div class="stat-number" id="statDone">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-box stat-overdue">
+                    <div class="stat-number" id="statOverdue">0</div>
+                    <div class="stat-label">Overdue</div>
+                </div>
+            </div>
 
-        <!-- STATS BAR -->
-        <div class="stats-bar">
-            <div class="stat-card">
-                <div class="stat-label">Total Tasks</div>
-                <div class="stat-number" id="stat-total">0</div>
+            <!-- FILTER BAR -->
+            <div class="filter-bar">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search by task name or employee...">
+                <select id="statusFilter" class="filter-select">
+                    <option value="">All Status</option>
+                    <option value="pending">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="overdue">Overdue</option>
+                </select>
+                <select id="priorityFilter" class="filter-select">
+                    <option value="">All Priority</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+                <select id="employeeFilter" class="filter-select">
+                    <option value="">All Employees</option>
+                </select>
+                <button class="btn-reset" onclick="resetFilters()">Reset</button>
+                <?php if ($isAdmin): ?>
+                    <button class="btn-new-task" onclick="openAssignModal()">+ New Task</button>
+                <?php endif; ?>
             </div>
-            <div class="stat-card stat-todo">
-                <div class="stat-label">To Do</div>
-                <div class="stat-number" id="stat-todo">0</div>
-            </div>
-            <div class="stat-card stat-progress">
-                <div class="stat-label">In Progress</div>
-                <div class="stat-number" id="stat-progress">0</div>
-            </div>
-            <div class="stat-card stat-done">
-                <div class="stat-label">Completed</div>
-                <div class="stat-number" id="stat-done">0</div>
-            </div>
-            <div class="stat-card stat-overdue">
-                <div class="stat-label">Overdue</div>
-                <div class="stat-number" id="stat-overdue">0</div>
-            </div>
-        </div>
 
-        <!-- FILTER BAR -->
-        <div class="filter-bar">
-            <div class="filter-search">
-                <input
-                    type="text"
-                    id="searchInput"
-                    placeholder="Search by task name or employee..."
-                    onkeyup="applyFilters()"
-                >
-            </div>
-            <select id="statusFilter" class="filter-select" onchange="applyFilters()">
-                <option value="">All Status</option>
-                <option value="pending">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="overdue">Overdue</option>
-            </select>
-            <select id="priorityFilter" class="filter-select" onchange="applyFilters()">
-                <option value="">All Priority</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-            </select>
-            <select id="employeeFilter" class="filter-select" onchange="applyFilters()">
-                <option value="">All Employees</option>
-            </select>
-            <button class="btn-reset" onclick="resetFilters()">Reset</button>
-        </div>
-
-        <!-- TABLE -->
-        <div class="table-wrapper">
-            <div id="taskTableContainer">
-                <table>
+            <!-- TABLE OR EMPTY STATE -->
+            <div id="tableWrapper" class="table-container">
+                <table id="tasksTable">
                     <thead>
                         <tr>
-                            <th class="col-employee">Employee</th>
-                            <th class="col-task">Task</th>
-                            <th class="col-priority">Priority</th>
-                            <th class="col-status">Status</th>
-                            <th class="col-duedate">Due Date</th>
-                            <th class="col-progress">Progress</th>
-                            <th class="col-actions">Actions</th>
+                            <th class="checkbox-col" style="width: 40px;"><input type="checkbox" id="selectAll"></th>
+                            <th style="width: 30%;">Task</th>
+                            <th style="width: 18%;">Assigned To</th>
+                            <th style="width: 10%;">Priority</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 12%;">Due Date</th>
+                            <th style="width: 12%;">Progress</th>
+                            <th style="width: 8%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="tasksList"></tbody>
                 </table>
             </div>
+
             <div id="emptyState" class="empty-state" style="display: none;">
                 <div class="empty-icon">📋</div>
                 <div class="empty-title">No tasks found</div>
-                <div class="empty-text">Try adjusting your filters or create a new task</div>
-                <button class="btn-clear" onclick="resetFilters()">Clear Filters</button>
+                <div class="empty-text">Click + New Task to assign one</div>
             </div>
-            <div class="task-count">
-                <span>Showing <strong id="taskCount">0</strong> of <strong id="taskTotal">0</strong> tasks</span>
+
+            <!-- PAGINATION -->
+            <div id="paginationBar" class="pagination-bar" style="display: none;">
+                <div class="pagination-text">
+                    Showing <strong id="pageFrom">0</strong> to <strong id="pageTo">0</strong> of <strong id="pageTotal">0</strong> tasks
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn" id="prevBtn" onclick="previousPage()">← Previous</button>
+                    <button class="pagination-btn" id="nextBtn" onclick="nextPage()">Next →</button>
+                </div>
             </div>
         </div>
     </div>
@@ -773,25 +756,20 @@ $uid = currentUserId();
             <h2>Assign New Task</h2>
             <button class="modal-close" onclick="closeModal('assignModal')">×</button>
         </div>
-        <form id="assignTaskForm" onsubmit="handleAssignTask(event)">
+        <form onsubmit="handleAssignTask(event)">
             <div class="form-group">
                 <label class="form-label">Task Title *</label>
                 <input type="text" id="taskTitle" class="form-control" required>
             </div>
-
             <div class="form-group">
                 <label class="form-label">Description</label>
-                <textarea id="taskDescription" class="form-control"></textarea>
+                <textarea id="taskDesc" class="form-control"></textarea>
             </div>
-
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Assign To *</label>
-                    <select id="assignTo" class="form-control" required>
-                        <option value="">Select Employee</option>
-                    </select>
+                    <select id="assignTo" class="form-control" required></select>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Priority</label>
                     <select id="taskPriority" class="form-control">
@@ -801,13 +779,11 @@ $uid = currentUserId();
                     </select>
                 </div>
             </div>
-
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Due Date</label>
                     <input type="date" id="taskDueDate" class="form-control">
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Status</label>
                     <select id="taskStatus" class="form-control">
@@ -817,7 +793,6 @@ $uid = currentUserId();
                     </select>
                 </div>
             </div>
-
             <div class="modal-footer">
                 <button type="button" class="btn-cancel" onclick="closeModal('assignModal')">Cancel</button>
                 <button type="submit" class="btn-submit">Assign Task</button>
@@ -833,25 +808,21 @@ $uid = currentUserId();
             <h2>Edit Task</h2>
             <button class="modal-close" onclick="closeModal('editModal')">×</button>
         </div>
-        <form id="editTaskForm" onsubmit="handleEditTask(event)">
+        <form onsubmit="handleEditTask(event)">
             <input type="hidden" id="editTaskId">
-
             <div class="form-group">
                 <label class="form-label">Task Title *</label>
                 <input type="text" id="editTitle" class="form-control" required>
             </div>
-
             <div class="form-group">
                 <label class="form-label">Description</label>
-                <textarea id="editDescription" class="form-control"></textarea>
+                <textarea id="editDesc" class="form-control"></textarea>
             </div>
-
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Assign To *</label>
                     <select id="editAssignTo" class="form-control" required></select>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Priority</label>
                     <select id="editPriority" class="form-control">
@@ -861,13 +832,11 @@ $uid = currentUserId();
                     </select>
                 </div>
             </div>
-
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Due Date</label>
                     <input type="date" id="editDueDate" class="form-control">
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Status</label>
                     <select id="editStatus" class="form-control">
@@ -877,7 +846,6 @@ $uid = currentUserId();
                     </select>
                 </div>
             </div>
-
             <div class="modal-footer">
                 <button type="button" class="btn-cancel" onclick="closeModal('editModal')">Cancel</button>
                 <button type="submit" class="btn-submit">Save Changes</button>
@@ -889,18 +857,26 @@ $uid = currentUserId();
 <script>
 let allTasks = [];
 let filteredTasks = [];
+let currentPage = 1;
+const tasksPerPage = 10;
 const isAdmin = <?php echo $isAdmin ? 'true' : 'false'; ?>;
 const currentUserId = <?php echo $uid; ?>;
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadTasks();
+    await loadEmployees();
+    setupEventListeners();
+    setInterval(() => loadTasks(), 30000); // Refresh every 30 seconds
+});
 
 async function loadTasks() {
     try {
         const response = await apiFetch('/intranet/api/tasks.php?action=list');
         if (response.ok && response.data.tasks) {
             allTasks = response.data.tasks;
-            await loadEmployeeDropdowns();
             applyFilters();
             updateStats();
-            setInterval(() => loadTasks(), 30000);
         }
     } catch (err) {
         console.error('Failed to load tasks:', err);
@@ -908,30 +884,54 @@ async function loadTasks() {
     }
 }
 
-async function loadEmployeeDropdowns() {
+async function loadEmployees() {
     try {
         const response = await apiFetch('/intranet/api/tasks.php?action=get_employees');
         if (response.ok && response.data.employees) {
             const employees = response.data.employees;
+            const assignSelect = document.getElementById('assignTo');
+            const editSelect = document.getElementById('editAssignTo');
+            const filterSelect = document.getElementById('employeeFilter');
 
-            // Fill assign dropdown
             let html = '<option value="">Select Employee</option>';
             employees.forEach(emp => {
                 html += `<option value="${emp.id}">${emp.name}</option>`;
             });
-            document.getElementById('assignTo').innerHTML = html;
-            document.getElementById('editAssignTo').innerHTML = html;
+            assignSelect.innerHTML = html;
+            editSelect.innerHTML = html;
 
-            // Fill filter dropdown
             let filterHtml = '<option value="">All Employees</option>';
             employees.forEach(emp => {
                 filterHtml += `<option value="${emp.id}">${emp.name}</option>`;
             });
-            document.getElementById('employeeFilter').innerHTML = filterHtml;
+            filterSelect.innerHTML = filterHtml;
         }
     } catch (err) {
         console.error('Failed to load employees:', err);
     }
+}
+
+function setupEventListeners() {
+    document.getElementById('searchInput').addEventListener('keyup', applyFilters);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('priorityFilter').addEventListener('change', applyFilters);
+    document.getElementById('employeeFilter').addEventListener('change', applyFilters);
+
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal(modal.id);
+        });
+    });
+}
+
+function isTaskOverdue(task) {
+    if (task.status === 'completed') return false;
+    if (!task.due_date) return false;
+    return new Date(task.due_date) < new Date();
+}
+
+function getTaskStatus(task) {
+    return isTaskOverdue(task) ? 'overdue' : task.status;
 }
 
 function applyFilters() {
@@ -945,7 +945,7 @@ function applyFilters() {
             task.title.toLowerCase().includes(search) ||
             task.assignee_name.toLowerCase().includes(search);
 
-        const taskStatus = isTaskOverdue(task) ? 'overdue' : task.status;
+        const taskStatus = getTaskStatus(task);
         const matchStatus = !status || taskStatus === status;
         const matchPriority = !priority || task.priority === priority;
         const matchEmployee = !employee || task.assigned_to == employee;
@@ -953,108 +953,103 @@ function applyFilters() {
         return matchSearch && matchStatus && matchPriority && matchEmployee;
     });
 
+    currentPage = 1;
     renderTasks();
-    updateTaskCount();
-    toggleEmptyState();
-}
-
-function isTaskOverdue(task) {
-    if (task.status === 'completed') return false;
-    if (!task.due_date) return false;
-    return new Date(task.due_date) < new Date();
-}
-
-function getTaskStatus(task) {
-    if (isTaskOverdue(task)) return 'overdue';
-    return task.status;
 }
 
 function renderTasks() {
     const tbody = document.getElementById('tasksList');
+    const tableWrapper = document.getElementById('tableWrapper');
+    const emptyState = document.getElementById('emptyState');
+    const paginationBar = document.getElementById('paginationBar');
+
+    if (filteredTasks.length === 0) {
+        tableWrapper.style.display = 'none';
+        emptyState.style.display = 'block';
+        paginationBar.style.display = 'none';
+        tbody.innerHTML = '';
+        return;
+    }
+
+    tableWrapper.style.display = 'block';
+    emptyState.style.display = 'none';
+    paginationBar.style.display = 'flex';
+
+    const start = (currentPage - 1) * tasksPerPage;
+    const end = start + tasksPerPage;
+    const pageTasks = filteredTasks.slice(start, end);
+
     tbody.innerHTML = '';
 
-    filteredTasks.forEach(task => {
+    pageTasks.forEach(task => {
         const taskStatus = getTaskStatus(task);
         const isOverdue = taskStatus === 'overdue';
-        const isCompleted = task.status === 'completed';
-
         const progress = task.status === 'completed' ? 100 : (task.status === 'in_progress' ? 50 : 0);
-        const progressColor = isOverdue ? 'overdue' : (isCompleted ? 'completed' : '');
+        const progressColor = isOverdue ? 'overdue' : (task.status === 'completed' ? 'completed' : '');
 
-        const dueDate = task.due_date ? new Date(task.due_date) : null;
-        const dueDateStr = dueDate ? dueDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+        const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
 
         const row = document.createElement('tr');
-        row.className = isOverdue ? 'overdue' : (isCompleted ? 'completed' : '');
+        row.className = isOverdue ? 'overdue' : '';
 
-        const avatar = `
-            <div style="width: 36px; height: 36px; border-radius: 50%; background: ${task.assignee_color}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0;">
-                ${task.assignee_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </div>
-        `;
+        const initials = task.assignee_name.split(' ').map(n => n[0]).join('').toUpperCase();
+
+        let actionsHtml = '';
+        if (isAdmin) {
+            actionsHtml = `
+                <button class="action-btn" onclick="editTaskModal(${task.id})">Edit</button>
+                <button class="action-btn delete" onclick="deleteTaskConfirm(${task.id})">Del</button>
+            `;
+        } else {
+            if (task.assigned_to == currentUserId) {
+                actionsHtml = `
+                    <select onchange="quickStatusUpdate(${task.id}, this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid #E5E7EB; font-size: 12px;">
+                        <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>To Do</option>
+                        <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
+                    </select>
+                `;
+            }
+        }
 
         row.innerHTML = `
-            <td class="col-employee">
-                <div class="employee-cell">
-                    ${avatar}
-                    <div class="employee-info">
-                        <div class="employee-name">${escHtml(task.assignee_name)}</div>
-                    </div>
+            <td class="checkbox-col"><input type="checkbox" value="${task.id}"></td>
+            <td class="task-col">
+                <div class="task-title">${escHtml(task.title)}</div>
+                <div class="task-desc">${task.description ? escHtml(task.description) : '-'}</div>
+            </td>
+            <td class="assignee-col">
+                <div class="assignee-cell">
+                    <div class="avatar" style="background: ${task.assignee_color};">${initials}</div>
+                    <div>${escHtml(task.assignee_name)}</div>
                 </div>
             </td>
-
-            <td class="col-task">
-                <div class="task-cell">
-                    <div class="task-title">${escHtml(task.title)}</div>
-                    <div class="task-desc">${task.description ? escHtml(task.description) : '-'}</div>
-                </div>
+            <td class="priority-col">
+                <span class="badge badge-${task.priority}">${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</span>
             </td>
-
-            <td class="col-priority">
-                <span class="badge priority-${task.priority}">
-                    <span class="badge-dot"></span>
-                    ${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                </span>
+            <td class="status-col">
+                <span class="badge status-${taskStatus}">${taskStatus === 'pending' ? 'To Do' : taskStatus.charAt(0).toUpperCase() + taskStatus.slice(1).replace('_', ' ')}</span>
             </td>
-
-            <td class="col-status">
-                <span class="badge status-${taskStatus}">
-                    ${taskStatus === 'pending' ? 'To Do' : taskStatus.charAt(0).toUpperCase() + taskStatus.slice(1).replace('_', ' ')}
-                </span>
+            <td class="duedate-col">
+                <span class="due-date-text ${isOverdue ? 'overdue' : ''}">${dueDate}</span>
             </td>
-
-            <td class="col-duedate">
-                <div class="due-date ${isOverdue ? 'overdue' : ''}">
-                    <span class="due-icon">📅</span>
-                    <span>${dueDateStr}</span>
-                </div>
-            </td>
-
-            <td class="col-progress">
-                <div class="progress-cell">
+            <td class="progress-col">
+                <div class="progress-container">
                     <div class="progress-text">${progress}%</div>
                     <div class="progress-bar">
                         <div class="progress-fill ${progressColor}" style="width: ${progress}%"></div>
                     </div>
                 </div>
             </td>
-
-            <td class="col-actions">
-                ${isAdmin ? `
-                    <button class="btn-icon" onclick="editTask(${task.id})" title="Edit">✏️</button>
-                    <button class="btn-icon delete" onclick="deleteTask(${task.id})" title="Delete">🗑️</button>
-                ` : `
-                    <select class="status-dropdown" onchange="quickUpdateStatus(${task.id}, this.value)" ${task.assigned_to != currentUserId ? 'disabled' : ''}>
-                        <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>To Do</option>
-                        <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
-                    </select>
-                `}
+            <td class="actions-col">
+                ${actionsHtml}
             </td>
         `;
 
         tbody.appendChild(row);
     });
+
+    updatePagination();
 }
 
 function updateStats() {
@@ -1071,28 +1066,40 @@ function updateStats() {
         return new Date(t.due_date) < today;
     }).length;
 
-    document.getElementById('stat-total').textContent = total;
-    document.getElementById('stat-todo').textContent = todo;
-    document.getElementById('stat-progress').textContent = progress;
-    document.getElementById('stat-done').textContent = done;
-    document.getElementById('stat-overdue').textContent = overdue;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statTodo').textContent = todo;
+    document.getElementById('statProgress').textContent = progress;
+    document.getElementById('statDone').textContent = done;
+    document.getElementById('statOverdue').textContent = overdue;
 }
 
-function updateTaskCount() {
-    document.getElementById('taskCount').textContent = filteredTasks.length;
-    document.getElementById('taskTotal').textContent = allTasks.length;
+function updatePagination() {
+    const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
+    const start = (currentPage - 1) * tasksPerPage + 1;
+    const end = Math.min(currentPage * tasksPerPage, filteredTasks.length);
+
+    document.getElementById('pageFrom').textContent = filteredTasks.length === 0 ? '0' : start;
+    document.getElementById('pageTo').textContent = end;
+    document.getElementById('pageTotal').textContent = filteredTasks.length;
+
+    document.getElementById('prevBtn').disabled = currentPage === 1;
+    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
 }
 
-function toggleEmptyState() {
-    const table = document.getElementById('taskTableContainer');
-    const empty = document.getElementById('emptyState');
+function previousPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderTasks();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
 
-    if (filteredTasks.length === 0) {
-        table.style.display = 'none';
-        empty.style.display = 'block';
-    } else {
-        table.style.display = 'block';
-        empty.style.display = 'none';
+function nextPage() {
+    const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderTasks();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
@@ -1104,13 +1111,32 @@ function resetFilters() {
     applyFilters();
 }
 
+function openAssignModal() {
+    openModal('assignModal');
+}
+
+function editTaskModal(taskId) {
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    document.getElementById('editTaskId').value = taskId;
+    document.getElementById('editTitle').value = task.title;
+    document.getElementById('editDesc').value = task.description || '';
+    document.getElementById('editAssignTo').value = task.assigned_to;
+    document.getElementById('editPriority').value = task.priority;
+    document.getElementById('editDueDate').value = task.due_date || '';
+    document.getElementById('editStatus').value = task.status;
+
+    openModal('editModal');
+}
+
 async function handleAssignTask(e) {
     e.preventDefault();
 
     const data = {
         action: 'create',
         title: document.getElementById('taskTitle').value,
-        description: document.getElementById('taskDescription').value,
+        description: document.getElementById('taskDesc').value,
         assigned_to: document.getElementById('assignTo').value,
         priority: document.getElementById('taskPriority').value,
         due_date: document.getElementById('taskDueDate').value,
@@ -1124,9 +1150,9 @@ async function handleAssignTask(e) {
         });
 
         if (response.ok) {
-            showToast('Task assigned successfully!', 'success');
+            showToast('Task assigned!', 'success');
             closeModal('assignModal');
-            document.getElementById('assignTaskForm').reset();
+            e.target.reset();
             loadTasks();
         } else {
             showToast(response.data.error || 'Failed to assign task', 'error');
@@ -1137,21 +1163,6 @@ async function handleAssignTask(e) {
     }
 }
 
-async function editTask(taskId) {
-    const task = allTasks.find(t => t.id === taskId);
-    if (!task) return;
-
-    document.getElementById('editTaskId').value = taskId;
-    document.getElementById('editTitle').value = task.title;
-    document.getElementById('editDescription').value = task.description || '';
-    document.getElementById('editAssignTo').value = task.assigned_to;
-    document.getElementById('editPriority').value = task.priority;
-    document.getElementById('editDueDate').value = task.due_date || '';
-    document.getElementById('editStatus').value = task.status;
-
-    openModal('editModal');
-}
-
 async function handleEditTask(e) {
     e.preventDefault();
 
@@ -1159,7 +1170,7 @@ async function handleEditTask(e) {
         action: 'update',
         id: document.getElementById('editTaskId').value,
         title: document.getElementById('editTitle').value,
-        description: document.getElementById('editDescription').value,
+        description: document.getElementById('editDesc').value,
         assigned_to: document.getElementById('editAssignTo').value,
         priority: document.getElementById('editPriority').value,
         due_date: document.getElementById('editDueDate').value,
@@ -1173,7 +1184,7 @@ async function handleEditTask(e) {
         });
 
         if (response.ok) {
-            showToast('Task updated successfully!', 'success');
+            showToast('Task updated!', 'success');
             closeModal('editModal');
             loadTasks();
         } else {
@@ -1185,8 +1196,8 @@ async function handleEditTask(e) {
     }
 }
 
-async function deleteTask(taskId) {
-    confirmAction('Are you sure you want to delete this task?', async () => {
+function deleteTaskConfirm(taskId) {
+    confirmAction('Delete this task?', async () => {
         try {
             const response = await apiFetch('/intranet/api/tasks.php', {
                 method: 'POST',
@@ -1194,10 +1205,10 @@ async function deleteTask(taskId) {
             });
 
             if (response.ok) {
-                showToast('Task deleted successfully!', 'success');
+                showToast('Task deleted!', 'success');
                 loadTasks();
             } else {
-                showToast(response.data.error || 'Failed to delete task', 'error');
+                showToast('Failed to delete task', 'error');
             }
         } catch (err) {
             console.error('Error:', err);
@@ -1206,15 +1217,11 @@ async function deleteTask(taskId) {
     });
 }
 
-async function quickUpdateStatus(taskId, newStatus) {
+async function quickStatusUpdate(taskId, newStatus) {
     try {
         const response = await apiFetch('/intranet/api/tasks.php', {
             method: 'POST',
-            body: {
-                action: 'update',
-                id: taskId,
-                status: newStatus
-            }
+            body: { action: 'update', id: taskId, status: newStatus }
         });
 
         if (response.ok) {
@@ -1229,7 +1236,6 @@ async function quickUpdateStatus(taskId, newStatus) {
     }
 }
 
-// Modal helpers
 function openModal(id) {
     document.getElementById(id).classList.add('active');
 }
@@ -1237,18 +1243,4 @@ function openModal(id) {
 function closeModal(id) {
     document.getElementById(id).classList.remove('active');
 }
-
-// Close modals when clicking outside
-document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal(modal.id);
-        }
-    });
-});
-
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    loadTasks();
-});
 </script>
