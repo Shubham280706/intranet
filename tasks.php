@@ -1,434 +1,797 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/auth_check.php';
+require_once __DIR__ . '/includes/avatar.php';
+
 requireLogin();
 updateOnlineStatus(true);
-
-// Employees list for admin assign dropdown (server-side, avoid round-trip)
-$employees = [];
-if (isAdmin()) {
-    $stmt = getDB()->query("SELECT id, name, department, avatar_color FROM users ORDER BY name");
-    $employees = $stmt->fetchAll();
-}
-
 $pageTitle = 'Tasks';
+$isAdmin = isAdmin();
+$uid = currentUserId();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasks — <?= APP_NAME ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
-    <style>
-        /* Task Page Styles */
-        .stats-bar {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
-            margin-bottom: 28px;
-        }
+<?php require_once __DIR__ . '/includes/sidebar.php'; ?>
+<div class="main">
+    <?php require_once __DIR__ . '/includes/header.php'; ?>
 
-        .stat-item {
-            background: white;
-            border: 1px solid #E5E7EB;
-            border-radius: 12px;
-            padding: 18px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .stat-item:hover {
-            border-color: #2563EB;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: #6B7280;
-            font-weight: 500;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #2563EB;
-        }
-
-        .filter-bar {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 28px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #E5E7EB;
-        }
-
-        .task-cards-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-        }
-
-        .task-card {
-            background: white;
-            border: 1px solid #E5E7EB;
-            border-left: 4px solid;
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            transition: all 0.2s;
-        }
-
-        .task-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-            transform: translateY(-2px);
-        }
-
-        .task-card.priority-high {
-            border-left-color: #EF4444;
-        }
-
-        .task-card.priority-medium {
-            border-left-color: #F59E0B;
-        }
-
-        .task-card.priority-low {
-            border-left-color: #10B981;
-        }
-
-        .task-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .task-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #1F2937;
-            flex: 1;
-        }
-
-        .task-badge {
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .badge-todo {
-            background: #FEF9C3;
-            color: #854D0E;
-        }
-
-        .badge-inprogress {
-            background: #DBEAFE;
-            color: #1E40AF;
-        }
-
-        .badge-completed {
-            background: #DCFCE7;
-            color: #166534;
-        }
-
-        .badge-overdue {
-            background: #FEE2E2;
-            color: #991B1B;
-        }
-
-        .task-description {
-            font-size: 13px;
-            color: #6B7280;
-            line-height: 1.5;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .task-meta {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            font-size: 12px;
-            color: #6B7280;
-            padding-top: 8px;
-            border-top: 1px solid #F3F4F6;
-        }
-
-        .priority-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 4px;
-        }
-
-        .priority-dot.high {
-            background: #EF4444;
-        }
-
-        .priority-dot.medium {
-            background: #F59E0B;
-        }
-
-        .priority-dot.low {
-            background: #10B981;
-        }
-
-        .task-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #F3F4F6;
-        }
-
-        .assignee-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-        }
-
-        .assignee-avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 600;
-            color: white;
-            flex-shrink: 0;
-        }
-
-        .assignee-name {
-            font-size: 13px;
-            font-weight: 500;
-            color: #1F2937;
-        }
-
-        .task-due-date {
-            font-size: 12px;
-            color: #6B7280;
-        }
-
-        .task-due-date.overdue {
-            color: #EF4444;
-            font-weight: 500;
-        }
-
-        .task-actions {
-            display: flex;
-            gap: 6px;
-        }
-
-        .task-btn {
-            padding: 6px 12px;
-            border: 1px solid #D1D5DB;
-            border-radius: 6px;
-            background: white;
-            color: #374151;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .task-btn:hover {
-            border-color: #9CA3AF;
-            background: #F9FAFB;
-        }
-
-        .task-btn-delete {
-            background: #FEF2F2;
-            color: #DC2626;
-            border-color: #FECACA;
-        }
-
-        .task-btn-delete:hover {
-            background: #FEE2E2;
-            border-color: #FCA5A5;
-        }
-
-        .empty-state {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 60px 40px;
-            color: #6B7280;
-        }
-
-        .empty-icon {
-            font-size: 3rem;
-            margin-bottom: 16px;
-        }
-
-        .empty-state h3 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-        }
-
-        .empty-state p {
-            font-size: 0.9rem;
-            color: #6B7280;
-        }
-
-        @media (max-width: 1024px) {
-            .task-cards-grid {
-                grid-template-columns: repeat(2, 1fr);
+    <div class="page-content">
+        <style>
+            .tasks-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 32px;
+                gap: 16px;
             }
+
+            .tasks-header h1 {
+                font-size: 32px;
+                font-weight: 700;
+                color: #111827;
+                margin: 0;
+            }
+
+            .btn-assign {
+                background: var(--primary);
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: var(--radius-lg);
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 14px;
+                transition: var(--transition);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .btn-assign:hover {
+                background: var(--primary-hover);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            }
+
+            /* STATS BAR */
             .stats-bar {
-                grid-template-columns: repeat(3, 1fr);
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 16px;
+                margin-bottom: 32px;
             }
-        }
 
-        @media (max-width: 768px) {
-            .task-cards-grid {
-                grid-template-columns: 1fr;
+            .stat-card {
+                background: white;
+                border-radius: var(--radius-lg);
+                padding: 20px;
+                border: 0.5px solid var(--border);
+                text-align: center;
+                transition: var(--transition);
             }
-            .stats-bar {
-                grid-template-columns: repeat(2, 1fr);
+
+            .stat-card:hover {
+                box-shadow: var(--shadow-lg);
+                transform: translateY(-2px);
             }
+
+            .stat-label {
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                color: var(--gray-600);
+                margin-bottom: 8px;
+                letter-spacing: 0.5px;
+            }
+
+            .stat-number {
+                font-size: 32px;
+                font-weight: 700;
+                color: var(--gray-900);
+            }
+
+            .stat-todo .stat-number { color: #D97706; }
+            .stat-progress .stat-number { color: var(--primary); }
+            .stat-done .stat-number { color: #059669; }
+            .stat-overdue .stat-number { color: var(--danger); }
+
+            /* FILTER BAR */
             .filter-bar {
+                background: white;
+                border-radius: var(--radius-lg);
+                padding: 16px;
+                border: 0.5px solid var(--border);
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                margin-bottom: 24px;
                 flex-wrap: wrap;
             }
-        }
 
-        @media (max-width: 480px) {
-            .stats-bar {
-                grid-template-columns: 1fr;
+            .filter-search {
+                flex: 1;
+                min-width: 200px;
             }
-            .task-footer {
+
+            .filter-search input {
+                width: 100%;
+                padding: 10px 14px;
+                border: 0.5px solid var(--border);
+                border-radius: var(--radius);
+                font-size: 14px;
+                font-family: inherit;
+            }
+
+            .filter-search input::placeholder {
+                color: var(--gray-400);
+            }
+
+            .filter-search input:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            }
+
+            .filter-select {
+                padding: 10px 14px;
+                border: 0.5px solid var(--border);
+                border-radius: var(--radius);
+                font-size: 14px;
+                font-family: inherit;
+                background: white;
+                cursor: pointer;
+                min-width: 140px;
+            }
+
+            .filter-select:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            }
+
+            .btn-reset {
+                background: var(--gray-100);
+                color: var(--gray-700);
+                padding: 10px 16px;
+                border: none;
+                border-radius: var(--radius);
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: var(--transition);
+            }
+
+            .btn-reset:hover {
+                background: var(--gray-200);
+            }
+
+            /* TABLE */
+            .table-wrapper {
+                background: white;
+                border-radius: var(--radius-lg);
+                border: 0.5px solid var(--border);
+                overflow: hidden;
+            }
+
+            .table-header {
+                padding: 16px;
+                text-align: right;
+                color: var(--gray-600);
+                font-size: 13px;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            thead {
+                background: var(--gray-50);
+                border-bottom: 0.5px solid var(--border);
+            }
+
+            th {
+                padding: 14px 16px;
+                text-align: left;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                color: var(--gray-700);
+                letter-spacing: 0.5px;
+            }
+
+            td {
+                padding: 16px;
+                border-bottom: 0.5px solid var(--border);
+                font-size: 14px;
+            }
+
+            tbody tr {
+                transition: var(--transition);
+            }
+
+            tbody tr:hover {
+                background: var(--gray-50);
+            }
+
+            tbody tr.overdue {
+                background: #FFF8F8;
+            }
+
+            tbody tr.completed {
+                opacity: 0.7;
+            }
+
+            /* COLUMNS */
+            .col-employee { width: 16%; }
+            .col-task { width: 26%; }
+            .col-priority { width: 11%; }
+            .col-status { width: 13%; }
+            .col-duedate { width: 12%; }
+            .col-progress { width: 11%; }
+            .col-actions { width: 11%; }
+
+            .employee-cell {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .employee-info {
+                display: flex;
                 flex-direction: column;
-                align-items: flex-start;
+                gap: 2px;
             }
-        }
-    </style>
-</head>
-<body>
-<div class="app-shell">
-    <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
-    <div class="main">
-        <?php require_once __DIR__ . '/includes/header.php'; ?>
 
-        <div class="page-content">
+            .employee-name {
+                font-weight: 600;
+                color: var(--gray-900);
+            }
 
-            <!-- Page header -->
-            <div class="page-header">
-                <h2>Tasks</h2>
-                <?php if (isAdmin()): ?>
-                <button class="btn btn-primary" onclick="openCreateModal()">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    New Task
+            .employee-dept {
+                font-size: 12px;
+                color: var(--gray-500);
+            }
+
+            .task-cell {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .task-title {
+                font-weight: 600;
+                color: var(--gray-900);
+                line-height: 1.4;
+            }
+
+            .task-desc {
+                font-size: 13px;
+                color: var(--gray-500);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 250px;
+            }
+
+            /* BADGES */
+            .badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                width: fit-content;
+            }
+
+            .badge-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+            }
+
+            .priority-high { background: #FEE2E2; color: #991B1B; }
+            .priority-high .badge-dot { background: #EF4444; }
+
+            .priority-medium { background: #FEF9C3; color: #854D0E; }
+            .priority-medium .badge-dot { background: #F59E0B; }
+
+            .priority-low { background: #DCFCE7; color: #166534; }
+            .priority-low .badge-dot { background: #10B981; }
+
+            .status-pending { background: #FEF9C3; color: #854D0E; }
+            .status-in_progress { background: #DBEAFE; color: #1E40AF; }
+            .status-completed { background: #DCFCE7; color: #166534; }
+            .status-overdue { background: #FEE2E2; color: #991B1B; }
+
+            /* DUE DATE */
+            .due-date {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: var(--gray-700);
+            }
+
+            .due-date.overdue {
+                color: var(--danger);
+                font-weight: 600;
+            }
+
+            .due-icon {
+                font-size: 14px;
+            }
+
+            /* PROGRESS */
+            .progress-cell {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .progress-text {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--gray-700);
+            }
+
+            .progress-bar {
+                width: 100%;
+                height: 4px;
+                background: var(--gray-200);
+                border-radius: 2px;
+                overflow: hidden;
+            }
+
+            .progress-fill {
+                height: 100%;
+                background: var(--primary);
+                border-radius: 2px;
+                transition: width 0.3s ease;
+            }
+
+            .progress-fill.completed { background: #10B981; }
+            .progress-fill.overdue { background: var(--danger); }
+
+            /* ACTIONS */
+            .actions-cell {
+                display: flex;
+                gap: 8px;
+            }
+
+            .btn-icon {
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 6px;
+                border-radius: var(--radius);
+                font-size: 16px;
+                transition: var(--transition);
+                color: var(--gray-600);
+            }
+
+            .btn-icon:hover {
+                background: var(--gray-100);
+                color: var(--gray-900);
+            }
+
+            .btn-icon.delete:hover {
+                background: #FEE2E2;
+                color: var(--danger);
+            }
+
+            .status-dropdown {
+                padding: 6px 10px;
+                border: 0.5px solid var(--border);
+                border-radius: var(--radius);
+                font-size: 13px;
+                cursor: pointer;
+            }
+
+            /* EMPTY STATE */
+            .empty-state {
+                text-align: center;
+                padding: 80px 40px;
+            }
+
+            .empty-icon {
+                font-size: 64px;
+                margin-bottom: 16px;
+                opacity: 0.4;
+            }
+
+            .empty-title {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--gray-800);
+                margin-bottom: 8px;
+            }
+
+            .empty-text {
+                color: var(--gray-500);
+                margin-bottom: 24px;
+            }
+
+            .btn-clear {
+                background: var(--primary);
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: var(--radius-lg);
+                cursor: pointer;
+                font-weight: 600;
+                transition: var(--transition);
+            }
+
+            .btn-clear:hover {
+                background: var(--primary-hover);
+            }
+
+            /* MODALS */
+            .modal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .modal.active {
+                display: flex;
+            }
+
+            .modal-content {
+                background: white;
+                border-radius: var(--radius-lg);
+                padding: 32px;
+                max-width: 600px;
+                width: 90%;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            }
+
+            .modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 24px;
+                padding-bottom: 16px;
+                border-bottom: 0.5px solid var(--border);
+            }
+
+            .modal-header h2 {
+                font-size: 24px;
+                font-weight: 700;
+                color: var(--gray-900);
+                margin: 0;
+            }
+
+            .modal-close {
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                color: var(--gray-500);
+                transition: var(--transition);
+            }
+
+            .modal-close:hover {
+                color: var(--gray-900);
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .form-label {
+                display: block;
+                font-weight: 600;
+                color: var(--gray-900);
+                margin-bottom: 8px;
+                font-size: 14px;
+            }
+
+            .form-control {
+                width: 100%;
+                padding: 10px 14px;
+                border: 0.5px solid var(--border);
+                border-radius: var(--radius);
+                font-size: 14px;
+                font-family: inherit;
+                transition: var(--transition);
+            }
+
+            .form-control:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            }
+
+            textarea.form-control {
+                resize: vertical;
+                min-height: 100px;
+            }
+
+            .form-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+
+            .modal-footer {
+                display: flex;
+                gap: 12px;
+                justify-content: flex-end;
+                margin-top: 32px;
+                padding-top: 16px;
+                border-top: 0.5px solid var(--border);
+            }
+
+            .btn-cancel {
+                background: var(--gray-100);
+                color: var(--gray-700);
+                padding: 10px 24px;
+                border: none;
+                border-radius: var(--radius-lg);
+                cursor: pointer;
+                font-weight: 600;
+                transition: var(--transition);
+            }
+
+            .btn-cancel:hover {
+                background: var(--gray-200);
+            }
+
+            .btn-submit {
+                background: var(--primary);
+                color: white;
+                padding: 10px 24px;
+                border: none;
+                border-radius: var(--radius-lg);
+                cursor: pointer;
+                font-weight: 600;
+                transition: var(--transition);
+            }
+
+            .btn-submit:hover {
+                background: var(--primary-hover);
+            }
+
+            .btn-submit:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            /* TASK COUNT */
+            .task-count {
+                padding: 8px 0;
+                color: var(--gray-600);
+                font-size: 13px;
+                text-align: right;
+            }
+
+            /* RESPONSIVE */
+            @media (max-width: 1024px) {
+                .col-task { width: 35%; }
+                .col-progress { display: none; }
+                .col-duedate { display: none; }
+                .col-priority { width: 12%; }
+            }
+
+            @media (max-width: 768px) {
+                .stats-bar {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+
+                .filter-bar {
+                    flex-direction: column;
+                }
+
+                .filter-search {
+                    min-width: 100%;
+                }
+
+                .filter-select {
+                    width: 100%;
+                }
+
+                .col-employee { width: 35%; }
+                .col-task { display: none; }
+                .col-priority { display: none; }
+                .col-progress { display: none; }
+                .col-duedate { width: 25%; }
+
+                .task-cell {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+
+                td {
+                    padding: 12px;
+                    font-size: 13px;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .tasks-header {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .tasks-header h1 {
+                    font-size: 24px;
+                }
+
+                .btn-assign {
+                    width: 100%;
+                    justify-content: center;
+                }
+
+                .stats-bar {
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                }
+
+                .filter-bar {
+                    flex-direction: column;
+                }
+
+                .filter-select {
+                    width: 100%;
+                }
+
+                .btn-reset {
+                    width: 100%;
+                }
+
+                .col-employee { width: 100%; }
+                .col-actions { width: 100%; }
+
+                table {
+                    font-size: 12px;
+                }
+
+                td, th {
+                    padding: 10px;
+                }
+
+                .modal-content {
+                    width: 95%;
+                    padding: 20px;
+                }
+
+                .form-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+
+        <!-- PAGE HEADER -->
+        <div class="tasks-header">
+            <h1>Tasks</h1>
+            <?php if ($isAdmin): ?>
+                <button class="btn-assign" onclick="openModal('assignModal')">
+                    <span>+</span> Assign New Task
                 </button>
-                <?php endif; ?>
-            </div>
+            <?php endif; ?>
+        </div>
 
-            <!-- Summary Stats Bar -->
-            <div class="stats-bar">
-                <div class="stat-item" onclick="setStat('all')">
-                    <div class="stat-label">Total</div>
-                    <div class="stat-value" id="statTotal">0</div>
-                </div>
-                <div class="stat-item" onclick="setStat('pending')">
-                    <div class="stat-label">To Do</div>
-                    <div class="stat-value" id="statPending">0</div>
-                </div>
-                <div class="stat-item" onclick="setStat('in_progress')">
-                    <div class="stat-label">In Progress</div>
-                    <div class="stat-value" id="statInProgress">0</div>
-                </div>
-                <div class="stat-item" onclick="setStat('completed')">
-                    <div class="stat-label">Completed</div>
-                    <div class="stat-value" id="statCompleted">0</div>
-                </div>
-                <div class="stat-item" onclick="setStat('overdue')">
-                    <div class="stat-label">Overdue</div>
-                    <div class="stat-value" id="statOverdue">0</div>
-                </div>
+        <!-- STATS BAR -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-label">Total Tasks</div>
+                <div class="stat-number" id="stat-total">0</div>
             </div>
-
-            <!-- Filter Bar -->
-            <div class="filter-bar">
-                <select class="form-control" id="filterStatus" style="width:auto;min-width:130px" onchange="loadTasks()">
-                    <option value="">All Statuses</option>
-                    <option value="pending">To Do</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                </select>
-                <select class="form-control" id="filterPriority" style="width:auto;min-width:130px" onchange="loadTasks()">
-                    <option value="">All Priorities</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                </select>
-                <?php if (isAdmin()): ?>
-                <select class="form-control" id="filterAssignee" style="width:auto;min-width:160px" onchange="loadTasks()">
-                    <option value="">All Assignees</option>
-                    <?php foreach ($employees as $e): ?>
-                    <option value="<?= $e['id'] ?>"><?= sanitize($e['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <?php endif; ?>
-                <button class="btn btn-outline btn-sm" onclick="resetFilters()">Reset</button>
+            <div class="stat-card stat-todo">
+                <div class="stat-label">To Do</div>
+                <div class="stat-number" id="stat-todo">0</div>
             </div>
-
-            <!-- Task Cards Grid -->
-            <div id="taskCardsContainer" class="task-cards-grid">
-                <div style="text-align:center;padding:40px;color:#9CA3AF"><span class="spinner"></span></div>
+            <div class="stat-card stat-progress">
+                <div class="stat-label">In Progress</div>
+                <div class="stat-number" id="stat-progress">0</div>
             </div>
+            <div class="stat-card stat-done">
+                <div class="stat-label">Completed</div>
+                <div class="stat-number" id="stat-done">0</div>
+            </div>
+            <div class="stat-card stat-overdue">
+                <div class="stat-label">Overdue</div>
+                <div class="stat-number" id="stat-overdue">0</div>
+            </div>
+        </div>
 
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+            <div class="filter-search">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search by task name or employee..."
+                    onkeyup="applyFilters()"
+                >
+            </div>
+            <select id="statusFilter" class="filter-select" onchange="applyFilters()">
+                <option value="">All Status</option>
+                <option value="pending">To Do</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="overdue">Overdue</option>
+            </select>
+            <select id="priorityFilter" class="filter-select" onchange="applyFilters()">
+                <option value="">All Priority</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+            <select id="employeeFilter" class="filter-select" onchange="applyFilters()">
+                <option value="">All Employees</option>
+            </select>
+            <button class="btn-reset" onclick="resetFilters()">Reset</button>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrapper">
+            <div id="taskTableContainer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-employee">Employee</th>
+                            <th class="col-task">Task</th>
+                            <th class="col-priority">Priority</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-duedate">Due Date</th>
+                            <th class="col-progress">Progress</th>
+                            <th class="col-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksList"></tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-icon">📋</div>
+                <div class="empty-title">No tasks found</div>
+                <div class="empty-text">Try adjusting your filters or create a new task</div>
+                <button class="btn-clear" onclick="resetFilters()">Clear Filters</button>
+            </div>
+            <div class="task-count">
+                <span>Showing <strong id="taskCount">0</strong> of <strong id="taskTotal">0</strong> tasks</span>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- ── Create / Edit Task Modal (Admin) ── -->
-<?php if (isAdmin()): ?>
-<div class="modal-overlay" id="taskModal">
-    <div class="modal">
+<!-- ASSIGN TASK MODAL -->
+<div id="assignModal" class="modal">
+    <div class="modal-content">
         <div class="modal-header">
-            <span class="modal-title" id="taskModalTitle">New Task</span>
-            <button class="modal-close" onclick="closeModal('taskModal')">×</button>
+            <h2>Assign New Task</h2>
+            <button class="modal-close" onclick="closeModal('assignModal')">×</button>
         </div>
-        <div class="modal-body">
-            <input type="hidden" id="taskId">
+        <form id="assignTaskForm" onsubmit="handleAssignTask(event)">
             <div class="form-group">
-                <label class="form-label">Title <span style="color:var(--danger)">*</span></label>
-                <input type="text" id="taskTitle" class="form-control" placeholder="Task title" maxlength="200">
+                <label class="form-label">Task Title *</label>
+                <input type="text" id="taskTitle" class="form-control" required>
             </div>
+
             <div class="form-group">
                 <label class="form-label">Description</label>
-                <textarea id="taskDesc" class="form-control" rows="3" placeholder="Optional details…"></textarea>
+                <textarea id="taskDescription" class="form-control"></textarea>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+            <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Assign to <span style="color:var(--danger)">*</span></label>
-                    <select id="taskAssignee" class="form-control">
-                        <option value="">Select person…</option>
-                        <?php foreach ($employees as $e): ?>
-                        <option value="<?= $e['id'] ?>"><?= sanitize($e['name']) ?><?= $e['department'] ? ' ('.$e['department'].')' : '' ?></option>
-                        <?php endforeach; ?>
+                    <label class="form-label">Assign To *</label>
+                    <select id="assignTo" class="form-control" required>
+                        <option value="">Select Employee</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Priority</label>
                     <select id="taskPriority" class="form-control">
@@ -438,282 +801,454 @@ $pageTitle = 'Tasks';
                     </select>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select id="taskStatus" class="form-control">
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
+
+            <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Due Date</label>
                     <input type="date" id="taskDueDate" class="form-control">
                 </div>
+
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="taskStatus" class="form-control">
+                        <option value="pending">To Do</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-outline" onclick="closeModal('taskModal')">Cancel</button>
-            <button class="btn btn-primary" id="taskSaveBtn" onclick="saveTask()">Save Task</button>
-        </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('assignModal')">Cancel</button>
+                <button type="submit" class="btn-submit">Assign Task</button>
+            </div>
+        </form>
     </div>
 </div>
-<?php endif; ?>
 
-<!-- ── Update Status Modal (Employee) ── -->
-<?php if (!isAdmin()): ?>
-<div class="modal-overlay" id="statusModal">
-    <div class="modal" style="width:min(360px,94vw)">
+<!-- EDIT TASK MODAL -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
         <div class="modal-header">
-            <span class="modal-title">Update Status</span>
-            <button class="modal-close" onclick="closeModal('statusModal')">×</button>
+            <h2>Edit Task</h2>
+            <button class="modal-close" onclick="closeModal('editModal')">×</button>
         </div>
-        <div class="modal-body">
-            <input type="hidden" id="statusTaskId">
-            <p id="statusTaskTitle" style="font-size:.875rem;color:var(--gray-700);margin-bottom:16px;font-weight:500"></p>
+        <form id="editTaskForm" onsubmit="handleEditTask(event)">
+            <input type="hidden" id="editTaskId">
+
             <div class="form-group">
-                <label class="form-label">New Status</label>
-                <select id="newStatus" class="form-control">
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                </select>
+                <label class="form-label">Task Title *</label>
+                <input type="text" id="editTitle" class="form-control" required>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-outline" onclick="closeModal('statusModal')">Cancel</button>
-            <button class="btn btn-primary" onclick="updateStatus()">Update</button>
-        </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="editDescription" class="form-control"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Assign To *</label>
+                    <select id="editAssignTo" class="form-control" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select id="editPriority" class="form-control">
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Due Date</label>
+                    <input type="date" id="editDueDate" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="editStatus" class="form-control">
+                        <option value="pending">To Do</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="btn-submit">Save Changes</button>
+            </div>
+        </form>
     </div>
 </div>
-<?php endif; ?>
 
-<div id="toast-container"></div>
-<script src="<?= BASE_URL ?>/assets/js/app.js"></script>
 <script>
-const IS_ADMIN = <?= isAdmin() ? 'true' : 'false' ?>;
 let allTasks = [];
+let filteredTasks = [];
+const isAdmin = <?php echo $isAdmin ? 'true' : 'false'; ?>;
+const currentUserId = <?php echo $uid; ?>;
 
 async function loadTasks() {
-    const status   = document.getElementById('filterStatus')?.value   || '';
-    const priority = document.getElementById('filterPriority')?.value || '';
-    const assignee = document.getElementById('filterAssignee')?.value || '';
-
-    let url = '/intranet/api/tasks.php?action=list';
-    if (status)   url += '&status='      + encodeURIComponent(status);
-    if (priority) url += '&priority='    + encodeURIComponent(priority);
-    if (assignee) url += '&assigned_to=' + encodeURIComponent(assignee);
-
-    const container = document.getElementById('taskCardsContainer');
-    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray-400)"><span class="spinner"></span></div>`;
-
-    const r = await apiFetch(url);
-    if (!r.ok) {
-        container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--danger)">Failed to load tasks.</div>`;
-        return;
+    try {
+        const response = await apiFetch('/intranet/api/tasks.php?action=list');
+        if (response.ok && response.data.tasks) {
+            allTasks = response.data.tasks;
+            await loadEmployeeDropdowns();
+            applyFilters();
+            updateStats();
+            setInterval(() => loadTasks(), 30000);
+        }
+    } catch (err) {
+        console.error('Failed to load tasks:', err);
+        showToast('Failed to load tasks', 'error');
     }
-
-    allTasks = r.data.tasks || [];
-    updateStats(allTasks);
-
-    if (!allTasks.length) {
-        container.innerHTML = `<div style="grid-column:1/-1">
-            <div class="empty-state">
-                <div class="empty-icon">📋</div>
-                <h3>No tasks found</h3>
-                <p>Click + New Task to assign one</p>
-            </div>
-        </div>`;
-        return;
-    }
-
-    container.innerHTML = allTasks.map(t => {
-        const isOverdue = isPastDue(t.due_date, t.status);
-        const statusLabel = t.status === 'pending' ? 'To Do' : t.status === 'in_progress' ? 'In Progress' : 'Completed';
-        const statusClass = t.status === 'pending' ? 'badge-todo' : t.status === 'in_progress' ? 'badge-inprogress' : 'badge-completed';
-        const priorityClass = `priority-${t.priority}`;
-        const initials = (t.assignee_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-
-        return `<div class="task-card ${priorityClass}">
-            <div class="task-card-header">
-                <div class="task-title">${escHtml(t.title)}</div>
-                <span class="task-badge ${statusClass}">${statusLabel}</span>
-            </div>
-
-            ${t.description ? `<div class="task-description">${escHtml(t.description)}</div>` : ''}
-
-            <div class="task-meta">
-                <span><span class="priority-dot ${t.priority}"></span>${t.priority}</span>
-                ${t.due_date ? `<span class="task-due-date ${isOverdue ? 'overdue' : ''}">${isOverdue ? '⏰ ' : ''}${formatDate(t.due_date)}</span>` : ''}
-            </div>
-
-            <div class="task-footer">
-                <div class="assignee-info">
-                    <div class="assignee-avatar" style="background:${escHtml(t.assignee_color)}">${initials}</div>
-                    <div class="assignee-name">${escHtml(t.assignee_name)}</div>
-                </div>
-
-                <div class="task-actions">
-                    ${IS_ADMIN ? `
-                        <button class="task-btn" onclick="editTask(${JSON.stringify(t).replace(/"/g,'&quot;')})">Edit</button>
-                        <button class="task-btn task-btn-delete" onclick="deleteTask(${t.id}, '${escHtml(t.title).replace(/'/g,"\\'")}')">Delete</button>
-                    ` : `
-                        <select class="form-control" style="width:auto;min-width:110px;font-size:12px;padding:6px 10px" onchange="quickStatusUpdate(${t.id}, this.value)">
-                            <option value="pending" ${t.status === 'pending' ? 'selected' : ''}>To Do</option>
-                            <option value="in_progress" ${t.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="completed" ${t.status === 'completed' ? 'selected' : ''}>Completed</option>
-                        </select>
-                    `}
-                </div>
-            </div>
-        </div>`;
-    }).join('');
 }
 
-function updateStats(tasks) {
-    const total = tasks.length;
-    const pending = tasks.filter(t => t.status === 'pending').length;
-    const inProgress = tasks.filter(t => t.status === 'in_progress').length;
-    const completed = tasks.filter(t => t.status === 'completed').length;
-    const overdue = tasks.filter(t => isPastDue(t.due_date, t.status)).length;
+async function loadEmployeeDropdowns() {
+    try {
+        const response = await apiFetch('/intranet/api/tasks.php?action=get_employees');
+        if (response.ok && response.data.employees) {
+            const employees = response.data.employees;
 
-    document.getElementById('statTotal').textContent = total;
-    document.getElementById('statPending').textContent = pending;
-    document.getElementById('statInProgress').textContent = inProgress;
-    document.getElementById('statCompleted').textContent = completed;
-    document.getElementById('statOverdue').textContent = overdue;
-}
+            // Fill assign dropdown
+            let html = '<option value="">Select Employee</option>';
+            employees.forEach(emp => {
+                html += `<option value="${emp.id}">${emp.name}</option>`;
+            });
+            document.getElementById('assignTo').innerHTML = html;
+            document.getElementById('editAssignTo').innerHTML = html;
 
-function setStat(type) {
-    const el = document.getElementById('filterStatus');
-    if (type === 'all') {
-        el.value = '';
-    } else if (type === 'overdue') {
-        el.value = '';
-        // Overdue filter would need API support
-    } else {
-        el.value = type;
+            // Fill filter dropdown
+            let filterHtml = '<option value="">All Employees</option>';
+            employees.forEach(emp => {
+                filterHtml += `<option value="${emp.id}">${emp.name}</option>`;
+            });
+            document.getElementById('employeeFilter').innerHTML = filterHtml;
+        }
+    } catch (err) {
+        console.error('Failed to load employees:', err);
     }
-    loadTasks();
 }
 
-async function quickStatusUpdate(taskId, newStatus) {
-    const r = await apiFetch('/intranet/api/tasks.php', {
-        method: 'POST',
-        body: { action: 'update', id: taskId, status: newStatus }
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const status = document.getElementById('statusFilter').value;
+    const priority = document.getElementById('priorityFilter').value;
+    const employee = document.getElementById('employeeFilter').value;
+
+    filteredTasks = allTasks.filter(task => {
+        const matchSearch = !search ||
+            task.title.toLowerCase().includes(search) ||
+            task.assignee_name.toLowerCase().includes(search);
+
+        const taskStatus = isTaskOverdue(task) ? 'overdue' : task.status;
+        const matchStatus = !status || taskStatus === status;
+        const matchPriority = !priority || task.priority === priority;
+        const matchEmployee = !employee || task.assigned_to == employee;
+
+        return matchSearch && matchStatus && matchPriority && matchEmployee;
     });
-    if (r.ok) {
-        showToast('Status updated', 'success');
-        loadTasks();
-    } else {
-        showToast(r.data.error || 'Failed to update', 'error');
-    }
+
+    renderTasks();
+    updateTaskCount();
+    toggleEmptyState();
 }
 
-function isPastDue(dateStr, status) {
-    return status !== 'completed' && new Date(dateStr) < new Date();
+function isTaskOverdue(task) {
+    if (task.status === 'completed') return false;
+    if (!task.due_date) return false;
+    return new Date(task.due_date) < new Date();
+}
+
+function getTaskStatus(task) {
+    if (isTaskOverdue(task)) return 'overdue';
+    return task.status;
+}
+
+function renderTasks() {
+    const tbody = document.getElementById('tasksList');
+    tbody.innerHTML = '';
+
+    filteredTasks.forEach(task => {
+        const taskStatus = getTaskStatus(task);
+        const isOverdue = taskStatus === 'overdue';
+        const isCompleted = task.status === 'completed';
+
+        const progress = task.status === 'completed' ? 100 : (task.status === 'in_progress' ? 50 : 0);
+        const progressColor = isOverdue ? 'overdue' : (isCompleted ? 'completed' : '');
+
+        const dueDate = task.due_date ? new Date(task.due_date) : null;
+        const dueDateStr = dueDate ? dueDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+
+        const row = document.createElement('tr');
+        row.className = isOverdue ? 'overdue' : (isCompleted ? 'completed' : '');
+
+        const avatar = `
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: ${task.assignee_color}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0;">
+                ${task.assignee_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+            </div>
+        `;
+
+        row.innerHTML = `
+            <td class="col-employee">
+                <div class="employee-cell">
+                    ${avatar}
+                    <div class="employee-info">
+                        <div class="employee-name">${escHtml(task.assignee_name)}</div>
+                    </div>
+                </div>
+            </td>
+
+            <td class="col-task">
+                <div class="task-cell">
+                    <div class="task-title">${escHtml(task.title)}</div>
+                    <div class="task-desc">${task.description ? escHtml(task.description) : '-'}</div>
+                </div>
+            </td>
+
+            <td class="col-priority">
+                <span class="badge priority-${task.priority}">
+                    <span class="badge-dot"></span>
+                    ${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                </span>
+            </td>
+
+            <td class="col-status">
+                <span class="badge status-${taskStatus}">
+                    ${taskStatus === 'pending' ? 'To Do' : taskStatus.charAt(0).toUpperCase() + taskStatus.slice(1).replace('_', ' ')}
+                </span>
+            </td>
+
+            <td class="col-duedate">
+                <div class="due-date ${isOverdue ? 'overdue' : ''}">
+                    <span class="due-icon">📅</span>
+                    <span>${dueDateStr}</span>
+                </div>
+            </td>
+
+            <td class="col-progress">
+                <div class="progress-cell">
+                    <div class="progress-text">${progress}%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${progressColor}" style="width: ${progress}%"></div>
+                    </div>
+                </div>
+            </td>
+
+            <td class="col-actions">
+                ${isAdmin ? `
+                    <button class="btn-icon" onclick="editTask(${task.id})" title="Edit">✏️</button>
+                    <button class="btn-icon delete" onclick="deleteTask(${task.id})" title="Delete">🗑️</button>
+                ` : `
+                    <select class="status-dropdown" onchange="quickUpdateStatus(${task.id}, this.value)" ${task.assigned_to != currentUserId ? 'disabled' : ''}>
+                        <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>To Do</option>
+                        <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
+                    </select>
+                `}
+            </td>
+        `;
+
+        tbody.appendChild(row);
+    });
+}
+
+function updateStats() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let total = allTasks.length;
+    let todo = allTasks.filter(t => t.status === 'pending').length;
+    let progress = allTasks.filter(t => t.status === 'in_progress').length;
+    let done = allTasks.filter(t => t.status === 'completed').length;
+    let overdue = allTasks.filter(t => {
+        if (t.status === 'completed') return false;
+        if (!t.due_date) return false;
+        return new Date(t.due_date) < today;
+    }).length;
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-todo').textContent = todo;
+    document.getElementById('stat-progress').textContent = progress;
+    document.getElementById('stat-done').textContent = done;
+    document.getElementById('stat-overdue').textContent = overdue;
+}
+
+function updateTaskCount() {
+    document.getElementById('taskCount').textContent = filteredTasks.length;
+    document.getElementById('taskTotal').textContent = allTasks.length;
+}
+
+function toggleEmptyState() {
+    const table = document.getElementById('taskTableContainer');
+    const empty = document.getElementById('emptyState');
+
+    if (filteredTasks.length === 0) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+    } else {
+        table.style.display = 'block';
+        empty.style.display = 'none';
+    }
 }
 
 function resetFilters() {
-    ['filterStatus','filterPriority','filterAssignee'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    loadTasks();
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('priorityFilter').value = '';
+    document.getElementById('employeeFilter').value = '';
+    applyFilters();
 }
 
-// Admin: open blank create form
-function openCreateModal() {
-    document.getElementById('taskId').value       = '';
-    document.getElementById('taskTitle').value    = '';
-    document.getElementById('taskDesc').value     = '';
-    document.getElementById('taskAssignee').value = '';
-    document.getElementById('taskPriority').value = 'medium';
-    document.getElementById('taskStatus').value   = 'pending';
-    document.getElementById('taskDueDate').value  = '';
-    document.getElementById('taskModalTitle').textContent = 'New Task';
-    openModal('taskModal');
-}
+async function handleAssignTask(e) {
+    e.preventDefault();
 
-// Admin: populate edit form
-function editTask(t) {
-    document.getElementById('taskId').value       = t.id;
-    document.getElementById('taskTitle').value    = t.title;
-    document.getElementById('taskDesc').value     = t.description || '';
-    document.getElementById('taskAssignee').value = t.assigned_to;
-    document.getElementById('taskPriority').value = t.priority;
-    document.getElementById('taskStatus').value   = t.status;
-    document.getElementById('taskDueDate').value  = t.due_date || '';
-    document.getElementById('taskModalTitle').textContent = 'Edit Task';
-    openModal('taskModal');
-}
-
-async function saveTask() {
-    const id       = document.getElementById('taskId').value;
-    const title    = document.getElementById('taskTitle').value.trim();
-    const assignee = document.getElementById('taskAssignee')?.value;
-
-    if (!title) { showToast('Title is required', 'error'); return; }
-    if (!assignee) { showToast('Please select an assignee', 'error'); return; }
-
-    const btn = document.getElementById('taskSaveBtn');
-    btn.disabled = true;
-
-    const body = {
-        action:      id ? 'update' : 'create',
-        title,
-        description: document.getElementById('taskDesc').value.trim(),
-        assigned_to: parseInt(assignee),
-        priority:    document.getElementById('taskPriority').value,
-        status:      document.getElementById('taskStatus').value,
-        due_date:    document.getElementById('taskDueDate').value || null,
+    const data = {
+        action: 'create',
+        title: document.getElementById('taskTitle').value,
+        description: document.getElementById('taskDescription').value,
+        assigned_to: document.getElementById('assignTo').value,
+        priority: document.getElementById('taskPriority').value,
+        due_date: document.getElementById('taskDueDate').value,
+        status: document.getElementById('taskStatus').value
     };
-    if (id) body.id = parseInt(id);
 
-    const r = await apiFetch('/intranet/api/tasks.php', { method: 'POST', body });
-    btn.disabled = false;
+    try {
+        const response = await apiFetch('/intranet/api/tasks.php', {
+            method: 'POST',
+            body: data
+        });
 
-    if (r.ok) {
-        showToast(id ? 'Task updated' : 'Task created', 'success');
-        closeModal('taskModal');
-        loadTasks();
-    } else {
-        showToast(r.data.error || 'Failed to save task', 'error');
+        if (response.ok) {
+            showToast('Task assigned successfully!', 'success');
+            closeModal('assignModal');
+            document.getElementById('assignTaskForm').reset();
+            loadTasks();
+        } else {
+            showToast(response.data.error || 'Failed to assign task', 'error');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        showToast('Error assigning task', 'error');
     }
 }
 
-async function deleteTask(id, title) {
-    confirmAction(`Delete task "${title}"? This cannot be undone.`, async () => {
-        const r = await apiFetch('/intranet/api/tasks.php', { method: 'POST', body: { action: 'delete', id } });
-        if (r.ok) { showToast('Task deleted', 'success'); loadTasks(); }
-        else showToast(r.data.error || 'Failed to delete', 'error');
+async function editTask(taskId) {
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    document.getElementById('editTaskId').value = taskId;
+    document.getElementById('editTitle').value = task.title;
+    document.getElementById('editDescription').value = task.description || '';
+    document.getElementById('editAssignTo').value = task.assigned_to;
+    document.getElementById('editPriority').value = task.priority;
+    document.getElementById('editDueDate').value = task.due_date || '';
+    document.getElementById('editStatus').value = task.status;
+
+    openModal('editModal');
+}
+
+async function handleEditTask(e) {
+    e.preventDefault();
+
+    const data = {
+        action: 'update',
+        id: document.getElementById('editTaskId').value,
+        title: document.getElementById('editTitle').value,
+        description: document.getElementById('editDescription').value,
+        assigned_to: document.getElementById('editAssignTo').value,
+        priority: document.getElementById('editPriority').value,
+        due_date: document.getElementById('editDueDate').value,
+        status: document.getElementById('editStatus').value
+    };
+
+    try {
+        const response = await apiFetch('/intranet/api/tasks.php', {
+            method: 'POST',
+            body: data
+        });
+
+        if (response.ok) {
+            showToast('Task updated successfully!', 'success');
+            closeModal('editModal');
+            loadTasks();
+        } else {
+            showToast(response.data.error || 'Failed to update task', 'error');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        showToast('Error updating task', 'error');
+    }
+}
+
+async function deleteTask(taskId) {
+    confirmAction('Are you sure you want to delete this task?', async () => {
+        try {
+            const response = await apiFetch('/intranet/api/tasks.php', {
+                method: 'POST',
+                body: { action: 'delete', id: taskId }
+            });
+
+            if (response.ok) {
+                showToast('Task deleted successfully!', 'success');
+                loadTasks();
+            } else {
+                showToast(response.data.error || 'Failed to delete task', 'error');
+            }
+        } catch (err) {
+            console.error('Error:', err);
+            showToast('Error deleting task', 'error');
+        }
     });
 }
 
-// Employee: status modal
-function openStatusModal(id, title, currentStatus) {
-    document.getElementById('statusTaskId').value    = id;
-    document.getElementById('statusTaskTitle').textContent = title;
-    document.getElementById('newStatus').value       = currentStatus;
-    openModal('statusModal');
-}
+async function quickUpdateStatus(taskId, newStatus) {
+    try {
+        const response = await apiFetch('/intranet/api/tasks.php', {
+            method: 'POST',
+            body: {
+                action: 'update',
+                id: taskId,
+                status: newStatus
+            }
+        });
 
-async function updateStatus() {
-    const id     = document.getElementById('statusTaskId').value;
-    const status = document.getElementById('newStatus').value;
-    const r = await apiFetch('/intranet/api/tasks.php', { method: 'POST', body: { action: 'update', id: parseInt(id), status } });
-    if (r.ok) {
-        showToast('Status updated', 'success');
-        closeModal('statusModal');
-        loadTasks();
-    } else {
-        showToast(r.data.error || 'Failed to update', 'error');
+        if (response.ok) {
+            showToast('Status updated!', 'success');
+            loadTasks();
+        } else {
+            showToast('Failed to update status', 'error');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        showToast('Error updating status', 'error');
     }
 }
 
-loadTasks();
-startNotificationPolling();
+// Modal helpers
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+// Close modals when clicking outside
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal(modal.id);
+        }
+    });
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    loadTasks();
+});
 </script>
-</body>
-</html>
